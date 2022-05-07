@@ -1,5 +1,6 @@
 package simpledb.common;
 
+import jline.WindowsTerminal;
 import simpledb.common.Type;
 import simpledb.storage.DbFile;
 import simpledb.storage.HeapFile;
@@ -23,12 +24,50 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Catalog {
 
+    public class Table {
+        private DbFile file;
+        private String name;
+        private String pkeyField;
+
+        public Table(DbFile file, String name, String pkeyField) {
+            this.file = file;
+            this.name = name;
+            this.pkeyField = pkeyField;
+        }
+
+        public DbFile getDbFile() {
+            return file;
+        }
+
+        public void setDbFile(DbFile file) {
+            this.file = file;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getPkeyField() {
+            return pkeyField;
+        }
+
+        public void setPkeyField(String pkeyField) {
+            this.pkeyField = pkeyField;
+        }
+    }
+
+    HashMap<Integer, Table> tables;
     /**
      * Constructor.
      * Creates a new, empty catalog.
      */
     public Catalog() {
         // some code goes here
+        tables = new HashMap<>();
     }
 
     /**
@@ -42,6 +81,13 @@ public class Catalog {
      */
     public void addTable(DbFile file, String name, String pkeyField) {
         // some code goes here
+        for(Map.Entry<Integer, Table> entry : tables.entrySet()) {
+            if(entry.getValue().getName().equals(name)) {
+                tables.remove(entry.getKey());
+                break;
+            }
+        }
+        tables.put(file.getId(), new Table(file, name, pkeyField));
     }
 
     public void addTable(DbFile file, String name) {
@@ -65,7 +111,10 @@ public class Catalog {
      */
     public int getTableId(String name) throws NoSuchElementException {
         // some code goes here
-        return 0;
+        for(Map.Entry<Integer, Table> entry : tables.entrySet()) {
+            if(entry.getValue().getName().equals(name)) return entry.getKey();
+        }
+        throw new NoSuchElementException();
     }
 
     /**
@@ -76,7 +125,8 @@ public class Catalog {
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(tables.containsKey(tableid)) return tables.get(tableid).getDbFile().getTupleDesc();
+        throw new NoSuchElementException();
     }
 
     /**
@@ -87,27 +137,31 @@ public class Catalog {
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
         // some code goes here
-        return null;
+        if(tables.containsKey(tableid)) return tables.get(tableid).getDbFile();
+        throw new NoSuchElementException();
     }
 
     public String getPrimaryKey(int tableid) {
         // some code goes here
-        return null;
+        if(tables.containsKey(tableid)) return tables.get(tableid).getPkeyField();
+        throw new NoSuchElementException();
     }
 
     public Iterator<Integer> tableIdIterator() {
         // some code goes here
-        return null;
+        return tables.keySet().iterator();
     }
 
     public String getTableName(int id) {
         // some code goes here
-        return null;
+        if(tables.containsKey(id)) return tables.get(id).getName();
+        throw new NoSuchElementException();
     }
     
     /** Delete all tables from the catalog */
     public void clear() {
         // some code goes here
+        tables.clear();
     }
     
     /**
