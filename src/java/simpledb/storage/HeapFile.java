@@ -162,25 +162,18 @@ public class HeapFile implements DbFile {
 
         @Override
         public boolean hasNext() throws DbException, TransactionAbortedException {
-            if(it == null) {
-                return false;
-            }
-            if(!it.hasNext()) {
-//                System.out.println(nowPage + "&" + numPages);
-                while(nowPage < numPages) {
-                    nowPage ++;
-                    it = getIter(nowPage);
-                    if(it.hasNext()) {
-                        return true;
-                    } else {
-                        return false;
-                    }
+            while(nowPage < numPages) {
+                if(it == null) {
+                    return false;
                 }
+                if(it.hasNext()) {
+                    return true;
+                }
+                nowPage ++;
                 if(nowPage >= numPages) {
                     return false;
                 }
-            } else {
-                return true;
+                it = getIter(nowPage);
             }
             return false;
         }
