@@ -24,6 +24,12 @@ public class AggregateTest extends SimpleDbTestBase {
         SeqScan ss = new SeqScan(tid, table.getId(), "");
         Aggregate ag = new Aggregate(ss, aggregateColumn, groupColumn, operation);
 
+//        ag.open();
+//        System.out.println("actual");
+//        while(ag.hasNext()) {
+//            System.out.println(ag.next().toString());
+//        }
+//        ag.close();
         SystemTestUtil.matchTuples(ag, expectedResult);
         Database.getBufferPool().transactionComplete(tid);
     }
@@ -91,6 +97,12 @@ public class AggregateTest extends SimpleDbTestBase {
         // Compute the expected answer
         List<List<Integer>> expected =
                 aggregate(createdTuples, operation, groupColumn);
+
+//        System.out.println("except");
+//        for(List<Integer> i : expected) {
+//            for(Integer j : i) System.out.print(j + " ");
+//            System.out.println();
+//        }
 
         // validate that we get the answer
         validateAggregate(table, operation, 1, groupColumn, expected);
