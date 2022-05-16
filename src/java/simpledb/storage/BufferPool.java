@@ -9,6 +9,7 @@ import simpledb.transaction.TransactionId;
 
 import java.io.*;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -36,7 +37,7 @@ public class BufferPool {
 
     private final int numPages;
 
-    private final ConcurrentHashMap<PageId, Page> map;
+    private final ConcurrentHashMap<PageId, Page> pageCache;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -45,7 +46,7 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         this.numPages = numPages;
-        this.map = new ConcurrentHashMap<>();
+        this.pageCache = new ConcurrentHashMap<>();
     }
     
     public static int getPageSize() {
@@ -80,15 +81,15 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
-        Page page = map.get(pid);
+        Page page = pageCache.get(pid);
         if(page == null) {
-            if(map.size() == this.numPages) {
+            if(pageCache.size() == this.numPages) {
                 throw new DbException("BufferPool is full...");
             }else {
-                map.put(pid, Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid));
+                pageCache.put(pid, Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid));
             }
         }
-        return map.get(pid);
+        return pageCache.get(pid);
     }
 
     /**
@@ -153,6 +154,12 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(tableId);
+        List<Page> pages = dbFile.insertTuple(tid, t);
+        for(Page page:pages) {
+            page.markDirty(true, tid);
+            pageCache.put(page.getId(), page);
+        }
     }
 
     /**
@@ -172,6 +179,12 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        List<Page> pages = dbFile.deleteTuple(tid, t);
+        for(Page page:pages) {
+            page.markDirty(true, tid);
+            pageCache.put(page.getId(), page);
+        }
     }
 
     /**
