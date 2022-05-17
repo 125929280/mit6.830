@@ -32,6 +32,7 @@ public class InsertTest extends SimpleDbTestBase {
         // Insert source into destination
         TransactionId tid = new TransactionId();
         SeqScan ss = new SeqScan(tid, source.getId(), "");
+//        System.out.println(destination.numPages());
         Insert insOp = new Insert(tid, ss, destination.getId());
 
 //        Query q = new Query(insOp, tid);
@@ -39,6 +40,7 @@ public class InsertTest extends SimpleDbTestBase {
         boolean hasResult = false;
         while (insOp.hasNext()) {
             Tuple tup = insOp.next();
+//            System.out.println(hasResult);
             assertFalse(hasResult);
             hasResult = true;
             assertEquals(SystemTestUtil.SINGLE_INT_DESCRIPTOR, tup.getTupleDesc());
