@@ -33,20 +33,15 @@ public class Aggregate extends Operator {
      */
 
     private OpIterator child;
-
     private int afield, gfield;
-
     private Aggregator.Op aop;
 
+    private Type aType, gType;
+    private String aName, gName;
     private TupleDesc tupleDesc;
 
     private Aggregator aggregator;
-
     private OpIterator aggIterator;
-
-    private Type aType, gType;
-
-    private String aName, gName;
 
     public Aggregate(OpIterator child, int afield, int gfield, Aggregator.Op aop) {
         // some code goes here

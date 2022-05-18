@@ -23,7 +23,6 @@ import java.util.*;
 public class HeapFile implements DbFile {
 
     private File file;
-
     private TupleDesc tupleDesc;
 
     /**

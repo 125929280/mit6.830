@@ -25,7 +25,6 @@ public class Filter extends Operator {
      */
 
     private Predicate p;
-
     private OpIterator child;
 
     public Filter(Predicate p, OpIterator child) {
@@ -47,8 +46,8 @@ public class Filter extends Operator {
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
-        super.open();
         child.open();
+        super.open();
     }
 
     public void close() {
@@ -92,6 +91,7 @@ public class Filter extends Operator {
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        if(children == null || children.length < 1) return ;
         child = children[0];
     }
 

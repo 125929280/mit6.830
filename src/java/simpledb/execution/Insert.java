@@ -59,8 +59,8 @@ public class Insert extends Operator {
 
     public void open() throws DbException, TransactionAbortedException {
         // some code goes here
-        super.open();
         child.open();
+        super.open();
     }
 
     public void close() {

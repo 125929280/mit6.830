@@ -32,9 +32,7 @@ public class IntegerAggregator implements Aggregator {
      */
 
     private int gbFieldIndex, aFieldIndex;
-
     private Type gbfieldtype;
-
     private Op what;
 
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {

@@ -27,10 +27,7 @@ public class Join extends Operator {
      */
 
     private JoinPredicate p;
-
-    private OpIterator child1;
-
-    private OpIterator child2;
+    private OpIterator child1, child2;
 
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // some code goes here
@@ -76,9 +73,9 @@ public class Join extends Operator {
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
-        super.open();
         child1.open();
         child2.open();
+        super.open();
     }
 
     public void close() {

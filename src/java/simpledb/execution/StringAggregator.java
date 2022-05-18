@@ -25,9 +25,7 @@ public class StringAggregator implements Aggregator {
      */
 
     private int gbFieldIndex, aFieldIndex;
-
     private Type gbfieldtype;
-
     private Op what;
 
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {

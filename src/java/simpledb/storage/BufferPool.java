@@ -43,6 +43,7 @@ public class BufferPool {
 
     private final int numPages;
     private final ConcurrentHashMap<PageId, Node> pageCache;
+
     class Node {
         PageId pageId;
         Page page;
@@ -53,7 +54,6 @@ public class BufferPool {
             page = _page;
         }
     }
-
     Node L, R;
 
     private void remove(Node node) {

@@ -59,9 +59,7 @@ public class Predicate implements Serializable {
      */
 
     private int field;
-
     private Op op;
-
     private Field operand;
 
     public Predicate(int field, Op op, Field operand) {
