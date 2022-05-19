@@ -27,14 +27,15 @@ public class IntHistogram {
 
     private int buckets[];
     private int min, max, ntups;
-    private double width;
+    private int width;
 
     public IntHistogram(int buckets, int min, int max) {
     	// some code goes here
         this.buckets = new int[buckets];
         this.min = min;
         this.max = max;
-        width = (max - min + 1.0) / buckets;
+//        System.out.println((max - min + 1.0) / buckets + " " + ()));
+        width = (int) (Math.ceil((max - min + 1.0) / buckets));
         ntups = 0;
     }
 
@@ -63,33 +64,45 @@ public class IntHistogram {
     public double estimateSelectivity(Predicate.Op op, int v) {
 
     	// some code goes here
+        int index = (int)((v - min) / width);
+        double sum = 0.0;
         switch (op) {
-            case GREATER_THAN:
-                if(v <= min) {
-                    return 1.0;
-                } else if(v >= max) {
-                    return 0.0;
-                } else {
-                    int index = (int)((v - min) / width);
-                    double sum = 0.0;
-                    for(int i = index+1;i < buckets.length;i ++) {
-                        sum += buckets[i];
-                    }
-//                    System.out.println(v + " " + sum);
-//                    System.out.println("hb = " + buckets[index] + ", br = " + (min + (index + 1) * width) + ", const = " + v +  ", wb = " + width);
-                    sum += buckets[index] * (min + (index + 1) * width - v - 1) / width;
-                    return sum / ntups;
-                }
-            case LESS_THAN_OR_EQ:
-                return 1.0 - estimateSelectivity(Predicate.Op.GREATER_THAN, v);
-            case GREATER_THAN_OR_EQ:
-                return estimateSelectivity(Predicate.Op.GREATER_THAN, v-1);
-            case LESS_THAN:
-                return 1.0 - estimateSelectivity(Predicate.Op.GREATER_THAN_OR_EQ, v);
             case EQUALS:
-                return estimateSelectivity(Predicate.Op.GREATER_THAN_OR_EQ, v) - estimateSelectivity(Predicate.Op.GREATER_THAN, v);
+                if(index < 0 || index >= buckets.length) {
+                    return 0.0;
+                }
+//                System.out.println(buckets[index] + " " +  width + " " + ntups);
+                return (1.0 * buckets[index] / width) / ntups;
+            case GREATER_THAN:
+                if(index < 0) {
+                    return 1.0;
+                } else if(index >= buckets.length) {
+                    return 0.0;
+                }
+                int b_right = min + (index + 1) * width - 1;
+                sum = 1.0 * buckets[index] * (b_right - v) / width;
+                for(int i = index+1;i < buckets.length;i ++) {
+                    sum += buckets[i];
+                }
+                return sum / ntups;
+            case LESS_THAN:
+                if(index < 0) {
+                    return 0.0;
+                } else if(index >= buckets.length) {
+                    return 1.0;
+                }
+                int b_left = min + index * width;
+                sum = 1.0 * buckets[index] * (v - b_left) / width;
+                for(int i = 0;i < index;i ++) {
+                    sum += buckets[i];
+                }
+                return sum / ntups;
             case NOT_EQUALS:
                 return 1.0 - estimateSelectivity(Predicate.Op.EQUALS, v);
+            case GREATER_THAN_OR_EQ:
+                return estimateSelectivity(Predicate.Op.GREATER_THAN, v-1);
+            case LESS_THAN_OR_EQ:
+                return estimateSelectivity(Predicate.Op.LESS_THAN, v+1);
         }
         return -1.0;
     }
