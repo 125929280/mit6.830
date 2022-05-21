@@ -10,6 +10,8 @@ import simpledb.transaction.TransactionId;
 import java.io.*;
 
 import java.util.List;
+import java.util.Random;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -76,6 +78,7 @@ public class BufferPool {
         R = new Node();
         L.right = R;
         R.left = L;
+        lockManager = new LockManager();
     }
     
     public static int getPageSize() {
@@ -91,6 +94,113 @@ public class BufferPool {
     public static void resetPageSize() {
     	BufferPool.pageSize = DEFAULT_PAGE_SIZE;
     }
+
+
+    class Lock {
+        private TransactionId tid;
+        private Permissions type;
+
+        public Lock(TransactionId tid, Permissions type) {
+            this.tid = tid;
+            this.type = type;
+        }
+
+        public TransactionId getTid() {
+            return tid;
+        }
+
+        public Permissions getType() {
+            return type;
+        }
+
+        public void setTid(TransactionId tid) {
+            this.tid = tid;
+        }
+
+        public void setType(Permissions type) {
+            this.type = type;
+        }
+    }
+
+    class LockManager {
+        ConcurrentHashMap<PageId, Vector<Lock>> locksMap;
+
+        public LockManager() {
+            locksMap = new ConcurrentHashMap<>();
+        }
+
+        public synchronized boolean lock(TransactionId tid, PageId pid, Permissions type) {
+            Vector<Lock> locks = locksMap.get(pid);
+            Lock lock = new Lock(tid, type);
+            if(locks == null) {
+                //no locks on this page
+                locks = new Vector<>();
+                locks.add(lock);
+                locksMap.put(pid, locks);
+                return true;
+            }
+
+            if(locks.size() == 1) {
+                Lock firstLock = locks.get(0);
+                if(firstLock.tid.equals(tid)) {
+                    // 是当前事务的锁
+                    if(firstLock.type.equals(Permissions.READ_ONLY) && type.equals(Permissions.READ_WRITE)) {
+                        // 锁升级
+                        firstLock.setType(type);
+                    }
+                    return true;
+                } else {
+                    // 同为共享锁
+                    if(firstLock.type.equals(Permissions.READ_ONLY) && type.equals(Permissions.READ_ONLY)) {
+                        locks.add(lock);
+                        return true;
+                    }
+                    return false;
+                }
+            }
+
+            // 存在多个事务锁，说明全是共享锁
+            if(type.equals(Permissions.READ_WRITE)) {
+                return false;
+            }
+
+            for(Lock lock1 : locks) {
+                // 重复请求共享锁
+                if(lock.tid.equals(tid)) {
+                    return true;
+                }
+            }
+
+            locks.add(lock);
+            return true;
+        }
+
+        public synchronized void releaseLock(TransactionId tid, PageId pid) {
+            Vector<Lock> locks = locksMap.get(pid);
+            for(int i = 0;i < locks.size();i ++) {
+                Lock lock = locks.get(i);
+                if(lock.tid.equals(tid)) {
+                    locks.remove(i);
+                    if(locks.isEmpty()) {
+                        locksMap.remove(pid);
+                    }
+                    return ;
+                }
+            }
+        }
+
+        public synchronized boolean holdsLock(TransactionId tid, PageId pid) {
+            Vector<Lock> locks = locksMap.get(pid);
+            for(Lock lock : locks) {
+                if(lock.tid.equals(tid)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private LockManager lockManager;
 
     /**
      * Retrieve the specified page with the associated permissions.
@@ -110,6 +220,17 @@ public class BufferPool {
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
+        boolean hasLock = false;
+        long st = System.currentTimeMillis();
+        long timeout = new Random().nextInt(2000);
+        while(!hasLock) {
+            hasLock = lockManager.lock(tid, pid, perm);
+            long ed = System.currentTimeMillis();
+            if(ed - st > timeout) {
+                throw new TransactionAbortedException();
+            }
+        }
+
         if(!pageCache.containsKey(pid)) {
             Page page = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
             Node node = new Node(pid, page);
@@ -140,6 +261,7 @@ public class BufferPool {
     public  void unsafeReleasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+        lockManager.releaseLock(tid, pid);
     }
 
     /**
@@ -156,7 +278,7 @@ public class BufferPool {
     public boolean holdsLock(TransactionId tid, PageId p) {
         // some code goes here
         // not necessary for lab1|lab2
-        return false;
+        return lockManager.holdsLock(tid, p);
     }
 
     /**
