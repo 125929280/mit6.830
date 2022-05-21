@@ -59,6 +59,9 @@ public class BufferPool {
     Node L, R;
 
     private void remove(Node node) {
+//        System.out.println("node.left " + node.left);
+//        System.out.println("node.left.right " + node.left.right);
+//        System.out.println("node.right " + node.right);
         node.left.right = node.right;
         node.right.left = node.left;
     }
@@ -180,11 +183,26 @@ public class BufferPool {
             for(int i = 0;i < locks.size();i ++) {
                 Lock lock = locks.get(i);
                 if(lock.tid.equals(tid)) {
-                    locks.remove(i);
+                    locks.remove(lock);
                     if(locks.isEmpty()) {
                         locksMap.remove(pid);
                     }
                     return ;
+                }
+            }
+        }
+
+        public synchronized void releaseAllLocks(TransactionId tid) {
+            for(PageId pageId : locksMap.keySet()) {
+                Vector<Lock> locks = locksMap.get(pageId);
+                for(int i = 0;i < locks.size();i ++) {
+                    Lock lock = locks.get(i);
+                    if(lock.tid.equals(tid)) {
+                        locks.remove(lock);
+                        if(locks.isEmpty()) {
+                            locksMap.remove(pageId);
+                        }
+                    }
                 }
             }
         }
@@ -217,18 +235,18 @@ public class BufferPool {
      * @param pid the ID of the requested page
      * @param perm the requested permissions on the page
      */
-    public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
+    public synchronized Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
         // some code goes here
         boolean hasLock = false;
         long st = System.currentTimeMillis();
-        long timeout = new Random().nextInt(2000);
+        long timeout = new Random().nextInt(200);
         while(!hasLock) {
-            hasLock = lockManager.lock(tid, pid, perm);
             long ed = System.currentTimeMillis();
             if(ed - st > timeout) {
                 throw new TransactionAbortedException();
             }
+            hasLock = lockManager.lock(tid, pid, perm);
         }
 
         if(!pageCache.containsKey(pid)) {
@@ -272,6 +290,7 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid) {
         // some code goes here
         // not necessary for lab1|lab2
+        transactionComplete(tid, true);
     }
 
     /** Return true if the specified transaction has a lock on the specified page */
@@ -291,6 +310,28 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         // some code goes here
         // not necessary for lab1|lab2
+        if(commit) {
+            try {
+                flushPages(tid);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            restorePages(tid);
+        }
+        lockManager.releaseAllLocks(tid);
+    }
+
+    public synchronized void restorePages(TransactionId tid) {
+        for(Node node : pageCache.values()) {
+            if(tid.equals(node.page.isDirty())) {
+                Page oriPage = Database.getCatalog().getDatabaseFile(node.pageId.getTableId()).readPage(node.pageId);
+                remove(node);
+                node.page = oriPage;
+                insert(node);
+                pageCache.put(node.pageId, node);
+            }
+        }
     }
 
     /**
@@ -317,7 +358,6 @@ public class BufferPool {
         for(Page page:pages) {
             page.markDirty(true, tid);
             Node node = new Node(t.getRecordId().getPageId(), page);
-//            remove(node);
             insert(node);
             pageCache.put(page.getId(), node);
         }
@@ -345,7 +385,6 @@ public class BufferPool {
         for(Page page:pages) {
             page.markDirty(true, tid);
             Node node = new Node(t.getRecordId().getPageId(), page);
-//            remove(node);
             insert(node);
             pageCache.put(page.getId(), node);
         }
@@ -397,6 +436,11 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        for(Node node : pageCache.values()) {
+            if(node.page.isDirty() != null && node.page.isDirty().equals(tid)) {
+                flushPage(node.pageId);
+            }
+        }
     }
 
     /**
@@ -406,14 +450,27 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
-        Node node = R.left;
-        remove(node);
-        try {
-            flushPage(node.pageId);
-        } catch (IOException e) {
-            e.printStackTrace();
+
+//        // lab2 exe4
+//        Node node = R.left;
+//        remove(node);
+//        try {
+//            flushPage(node.pageId);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        discardPage(node.pageId);
+
+        // lab4 exe3
+        for(Node node = R.left; node != L; node = node.left) {
+            if(node.page.isDirty() == null) {
+                // 不是脏页, evict
+                remove(node);
+                discardPage(node.pageId);
+                return ;
+            }
         }
-        discardPage(node.pageId);
+        throw new DbException("all pages are dirty");
     }
 
 }
