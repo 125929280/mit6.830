@@ -437,7 +437,7 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1|lab2
         for(Node node : pageCache.values()) {
-            if(node.page.isDirty() != null && node.page.isDirty().equals(tid)) {
+            if(tid.equals(node.page.isDirty())) {
                 flushPage(node.pageId);
             }
         }
