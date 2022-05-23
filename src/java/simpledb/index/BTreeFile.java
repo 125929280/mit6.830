@@ -274,13 +274,15 @@ public class BTreeFile implements DbFile {
 		// 双向链表插入newPage，接在page右边
 		newPage.setLeftSiblingId(page.getId());
 		page.setRightSiblingId(newPage.getId());
-		dirtypages.put(page.getId(), page);
-		dirtypages.put(newPage.getId(), newPage);
 
 		BTreeInternalPage parentPage = getParentWithEmptySlots(tid, dirtypages, page.getParentId(), field);
 		Field mid = newPage.iterator().next().getField(newPage.keyField);
 		parentPage.insertEntry(new BTreeEntry(mid, page.getId(), newPage.getId()));
+
+		dirtypages.put(page.getId(), page);
+		dirtypages.put(newPage.getId(), newPage);
 		dirtypages.put(parentPage.getId(), parentPage);
+
 		updateParentPointer(tid, dirtypages, parentPage.getId(), page.getId());
 		updateParentPointer(tid, dirtypages, parentPage.getId(), newPage.getId());
 
