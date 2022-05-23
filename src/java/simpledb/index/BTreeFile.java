@@ -279,12 +279,12 @@ public class BTreeFile implements DbFile {
 		Field mid = newPage.iterator().next().getField(newPage.keyField);
 		parentPage.insertEntry(new BTreeEntry(mid, page.getId(), newPage.getId()));
 
+		updateParentPointer(tid, dirtypages, parentPage.getId(), page.getId());
+		updateParentPointer(tid, dirtypages, parentPage.getId(), newPage.getId());
+
 		dirtypages.put(page.getId(), page);
 		dirtypages.put(newPage.getId(), newPage);
 		dirtypages.put(parentPage.getId(), parentPage);
-
-		updateParentPointer(tid, dirtypages, parentPage.getId(), page.getId());
-		updateParentPointer(tid, dirtypages, parentPage.getId(), newPage.getId());
 
 		return field.compare(Op.GREATER_THAN_OR_EQ, mid) ? newPage : page;
 		
@@ -340,13 +340,13 @@ public class BTreeFile implements DbFile {
 		mid.setRightChild(newPage.getId());
 		parent.insertEntry(mid);
 
-		dirtypages.put(page.getId(), page);
-		dirtypages.put(newPage.getId(), newPage);
-		dirtypages.put(parent.getId(), parent);
-
 		updateParentPointers(tid, dirtypages, page);
 		updateParentPointers(tid, dirtypages, newPage);
 		updateParentPointers(tid, dirtypages, parent);
+
+		dirtypages.put(page.getId(), page);
+		dirtypages.put(newPage.getId(), newPage);
+		dirtypages.put(parent.getId(), parent);
 
 		return field.compare(Op.GREATER_THAN_OR_EQ, mid.getKey()) ? newPage : page;
 	}
