@@ -282,7 +282,9 @@ public class BTreeFileDeleteTest extends SimpleDbTestBase {
 		DbFileIterator it = bigFile.iterator(tid);
 		it.open();
 		int count = 0;
-		Database.getBufferPool().deleteTuple(tid, it.next());
+		Tuple next = it.next();
+		System.out.println(next.getRecordId());
+		Database.getBufferPool().deleteTuple(tid, next);
 		it.rewind();
 		while(count < 62) {
 			assertEquals(count, leftChild.getNumEmptySlots());

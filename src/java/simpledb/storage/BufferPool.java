@@ -240,7 +240,7 @@ public class BufferPool {
         // some code goes here
         boolean hasLock = false;
         long st = System.currentTimeMillis();
-        long timeout = new Random().nextInt(200);
+        long timeout = new Random().nextInt(2000);
         while(!hasLock) {
             long ed = System.currentTimeMillis();
             if(ed - st > timeout) {
@@ -357,7 +357,7 @@ public class BufferPool {
         List<Page> pages = dbFile.insertTuple(tid, t);
         for(Page page:pages) {
             page.markDirty(true, tid);
-            Node node = new Node(t.getRecordId().getPageId(), page);
+            Node node = new Node(page.getId(), page);
             insert(node);
             pageCache.put(page.getId(), node);
         }
@@ -381,10 +381,16 @@ public class BufferPool {
         // some code goes here
         // not necessary for lab1
         DbFile dbFile = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+//        System.out.println("1& " + t);
+//        System.out.println("1& " + t.getRecordId());
         List<Page> pages = dbFile.deleteTuple(tid, t);
+//        System.out.println("2& " + t);
+//        System.out.println("2& " + t.getRecordId());
         for(Page page:pages) {
             page.markDirty(true, tid);
-            Node node = new Node(t.getRecordId().getPageId(), page);
+//            System.out.println("loop & " + t);
+//            System.out.println("loop & " + t.getRecordId());
+            Node node = new Node(page.getId(), page);
             insert(node);
             pageCache.put(page.getId(), node);
         }
