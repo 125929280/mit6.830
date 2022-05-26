@@ -93,6 +93,7 @@ public class LogFile {
 //    int pageSize;
     int totalRecords = 0; // for PatchTest //protected by this
 
+    // [k, v] -> [tid, offset]
     final Map<Long,Long> tidToFirstLogRecord = new HashMap<>();
 
     /** Constructor.
@@ -460,6 +461,38 @@ public class LogFile {
             synchronized(this) {
                 preAppend();
                 // some code goes here
+
+                Long begin = tidToFirstLogRecord.get(tid.getId());
+                raf.seek(begin);
+                while(true) {
+                    try {
+                        int type = raf.readInt();
+                        long curTid = raf.readLong();
+                        if(type == UPDATE_RECORD) {
+                            // UPDATE RECORDS consist of two entries, a before image and an after image
+                            Page before = readPageData(raf);
+                            Page after = readPageData(raf);
+                            if(curTid == tid.getId()) {
+                                Database.getBufferPool().discardPage(before.getId());
+                                Database.getCatalog().getDatabaseFile(before.getId().getTableId()).writePage(before);
+                            }
+                        } else if(type == CHECKPOINT_RECORD) {
+                            // The format of the record is an integer count of the number of transactions, as well
+                            // as a long integer transaction id and a long integer first record offset
+                            // for each active transaction.
+                            int cnt = raf.readInt();
+                            while(cnt -- > 0) {
+                                raf.readLong();
+                                raf.readLong();
+                            }
+                        }
+
+                        // Each log record ends with a long integer file offset representing the position in the log file where the record began.
+                        raf.readLong();
+                    } catch (IOException e) {
+                        break;
+                    }
+                }
             }
         }
     }

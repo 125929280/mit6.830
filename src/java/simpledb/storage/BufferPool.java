@@ -312,7 +312,17 @@ public class BufferPool {
         // not necessary for lab1|lab2
         if(commit) {
             try {
-                flushPages(tid);
+                // flushPages(tid);
+                // lab6 Getting started
+                for(Node node : pageCache.values()) {
+                    if(tid.equals(node.page.isDirty())) {
+                        flushPage(node.pageId);
+
+                        // use current page contents as the before-image
+                        // for the next transaction that modifies this page.
+                        node.page.setBeforeImage();
+                    }
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -430,7 +440,18 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+
         Page page = pageCache.get(pid).page;
+
+        // lab 6 Getting started
+        // append an update record to the log, with
+        // a before-image and after-image.
+        TransactionId dirtier = page.isDirty();
+        if (dirtier != null){
+            Database.getLogFile().logWrite(dirtier, page.getBeforeImage(), page);
+            Database.getLogFile().force();
+        }
+
         if(page.isDirty() != null) {
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(page);
             page.markDirty(false, null);
